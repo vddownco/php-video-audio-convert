@@ -1,72 +1,80 @@
 <?php
-
-session_start();
-$output;
-$return_var;
-
-if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['videoFile'])) {
-	$uploadDir = 'uploads/';
-	$audioDir = 'audio_output/';
-
-	if(!is_dir($uploadDir)) {
-		mkdir($uploadDir, 0777, true);
-	}
-
-	if(!is_dir($audioDir)) {
-		mkdir($audioDir, 0777, true);
-	}
-
-	$timestamp = date('Ymd_His');
-	$videoPath = $uploadDir . basename($_FILES['videoFile']['name']);
-	$audioFileName = pathinfo($_FILES['videoFile']['name'], PATHINFO_FILENAME) . '_' . $timestamp . '.mp3';
-	$audioPath = $audioDir . $audioFileName;
-
-	if(move_uploaded_file($_FILES['videoFile']['tmp_name'], $videoPath)) {
-		$command = "ffmpeg -i " . escapeshellarg($videoPath) . " -vn -ar 44100 -ac 2 -b:a 192k -f mp3 " . escapeshellarg($audioPath);
-		$output = [];
-		$return_var = -1;
-		exec($command . " 2>&1", $output, $return_var);
-
-		if($return_var === 0){
-			$_SESSION['audio_path'] = $audioPath;
-			$_SESSION['audio_filename'] = $audioFileName;
-			// echo "Konversi Berhasil! <a href='". htmlspecialchars($audioPath) ."'>Download Audio</a>";
-			unlink($videoPath);
-			header("Location: index.php");
-			exit;
-		} else {
-			echo "Konversi Gagal.<br>";
-			echo "Return code: " . $return_var . "<br>";
-			echo "FFmpeg output: <pre>" . htmlspecialchars(implode("\n", $output)) . "</pre>";
-
-			if(empty($output) && $return_var !== 0){
-				echo "<br><b>Kemungkinan Masalah:</b><br>";
-				echo "- FFmpeg tidak terinstal atau tidak ada dalam PATH sistem.<br>";
-				echo "- Path ke FFmpeg tidak benar.<br>";
-				echo "- PHP tidak memiliki izin untuk menjalankan shell commands.<br>";
-			}
-		}
-	} else {
-		echo "Gagal mengunggah file video";
-	}
-} else {
-	echo "";
+// Process form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = htmlspecialchars($_POST['name'] ?? '');
+    $email = htmlspecialchars($_POST['email'] ?? '');
+    
+    // Basic validation
+    if (empty($name) || empty($email)) {
+        $error = "Please fill in all fields.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
+    } else {
+        $success = "Thank you, " . $name . "! Your information has been received.";
+    }
 }
-
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Konversi</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Processing Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .success {
+            color: #28a745;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007cba;
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid #007cba;
+            border-radius: 4px;
+        }
+        .back-link:hover {
+            background-color: #007cba;
+            color: white;
+        }
+    </style>
 </head>
 <body>
-	<form action="" method="POST" enctype="multipart/form-data">
-		Pilih video untuk dikonversi:
-		<input type="file" name="videoFile" id="videoFile" accept="video/*">
-		<input type="submit" value="Konversi ke Audio" name="submit">
-	</form>
+    <div class="container">
+        <h1>Form Processing Result</h1>
+        
+        <?php if (isset($success)): ?>
+            <div class="success"><?php echo $success; ?></div>
+            <p>Name: <?php echo $name; ?></p>
+            <p>Email: <?php echo $email; ?></p>
+        <?php elseif (isset($error)): ?>
+            <div class="error"><?php echo $error; ?></div>
+        <?php else: ?>
+            <div class="error">No form data received.</div>
+        <?php endif; ?>
+        
+        <a href="index.php" class="back-link">← Back to Form</a>
+    </div>
 </body>
 </html>
